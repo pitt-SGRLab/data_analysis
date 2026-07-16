@@ -15,12 +15,12 @@ end
 %
 % process scans for fft etc
 %
-[abs_array,phase_array,w,i_max] = phasingProcessScans(t,igram);
+[abs_array,phase_array,w] = phasingProcessScans(t,igram);
 
 %
 % calculate the final phase and the index of the time closest to 0
 %
-[phase,ph,t0_bin_shift,i_fit]  = phasingFinalPhase(n_pairs,abs_array,phase_array,w,i_max);
+[phase,ph,t0_bin_shift,i_fit,i_max]  = phasingFinalPhase(n_pairs,abs_array,phase_array,w);
 
 %
 % plot interferograms and ffts
@@ -42,7 +42,7 @@ phasingPlot(n_pairs,t,igram,w,abs_array,phase_array,i_max,i_fit);
 % 
 % subfunctions
 %
-function [abs_array,phase_array,w,i_max] = phasingProcessScans(t,igram);
+function [abs_array,phase_array,w] = phasingProcessScans(t,igram);
 n_t = length(t);
 
 %index to the first guess for t0
@@ -68,23 +68,29 @@ abs_array = abs_array(:,1:ind);
 phase_array = phase_array(:,1:ind);
 w = w(1:ind);
 %find max of the spectrum from pair 1/2 (strong)
-[~,i_max]=max(abs_array(1,:));
+%[~,i_max]=max(abs_array(1,:));
 
 %---------------------------------------------------------------------
 %
 % calculate the final phase
 %
-function [phase,ph,delta_t_fringes,i_fit] = phasingFinalPhase(n_pairs,abs_array,phase_array,w,i_max)
+function [phase,ph,delta_t_fringes,i_fit,i_max] = phasingFinalPhase(n_pairs,abs_array,phase_array,w)
 %phasingFinalPhase
 global c_cmfs wavenumbersToInvFs fringeToFs
-n_fit_points = 5;
-fit_points_offset = (n_fit_points-1)/2;
+%n_fit_points = 5;
+%fit_points_offset = (n_fit_points-1)/2;
+
+var = movvar(abs_array, floor(sqrt(length(abs_array))));
+varbool = var >= 0.5*max(var);
+findvarbool = find(varbool);
+fit_points_offset = floor((findvarbool(end) - findvarbool(1))/2);
+i_max = findvarbool(1) + fit_points_offset;
 
 %rough guess
 %tau = 1/w(i_max)/wavenumbersToInvFs;
 disp(['rough guess frequency ' num2str(w(i_max))]);
 
-w0 = peakpos(w(i_max-2:i_max+2),abs_array(1,i_max-2:i_max+2));
+w0 = peakpos(w(i_max-fit_points_offset:i_max+fit_points_offset),abs_array(1,i_max-fit_points_offset:i_max+fit_points_offset));
 disp(['refined guess frequency ' num2str(w0)]);
 %refine guess
 tau = 1/w0/wavenumbersToInvFs;
